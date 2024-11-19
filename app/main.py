@@ -2,9 +2,7 @@ from typing import List, Tuple
 
 
 class Deck:
-    def __init__(self, row: int,
-                 column: int,
-                 is_alive: bool = True) -> None:
+    def __init__(self, row: int, column: int, is_alive: bool = True) -> None:
         self.row = row
         self.column = column
         self.is_alive = is_alive
@@ -14,8 +12,9 @@ class Deck:
 
 
 class Ship:
-    def __init__(self, start: Tuple[int, int],
-                 end: Tuple[int, int]) -> None:
+    def __init__(
+            self,
+            start: Tuple[int, int], end: Tuple[int, int]) -> None:
         self.start = start
         self.end = end
         self.decks: List[Deck] = []
@@ -42,8 +41,9 @@ class Ship:
 
 
 class Battleship:
-    def __init__(self,
-                 ships: List[Tuple[Tuple[int, int], Tuple[int, int]]]) -> None:
+    def __init__(
+            self,
+            ships: List[Tuple[Tuple[int, int], Tuple[int, int]]]) -> None:
         self.field: dict[Tuple[int, int], Ship] = {}
         self.ships: List[Ship] = []
         self._validate_field(ships)
@@ -51,11 +51,13 @@ class Battleship:
 
     def _place_ships(
             self,
-            ships: List[Tuple[Tuple[int, int], Tuple[int, int]]]
-    ) -> None:
+            ships: List[Tuple[Tuple[int, int], Tuple[int, int]]]) -> None:
         # Place the ships on the field and store them
         for ship_coords in ships:
             start, end = ship_coords
+            # First, check if the ship is adjacent to any other ship
+            if self._check_adjacent_cells(start, end):
+                raise ValueError("Ships cannot be in neighboring cells.")
             ship = Ship(start, end)
             self.ships.append(ship)
             for deck in ship.decks:
@@ -63,8 +65,7 @@ class Battleship:
 
     def _validate_field(
             self,
-            ships: List[Tuple[Tuple[int, int], Tuple[int, int]]]
-    ) -> None:
+            ships: List[Tuple[Tuple[int, int], Tuple[int, int]]]) -> None:
         ship_sizes = {1: 4, 2: 3, 3: 2, 4: 1}
         ship_counts = {1: 0, 2: 0, 3: 0, 4: 0}
 
@@ -87,26 +88,30 @@ class Battleship:
             if count != ship_sizes[size]:
                 raise ValueError(f"Invalid number of ships with {size} decks.")
 
-        # Check that ships are not in neighboring cells
-        for ship_coords in ships:
-            for (row, col) in self._get_adjacent_cells(ship_coords):
-                if (row, col) in self.field:
-                    raise ValueError("Ships cannot be in neighboring cells.")
-
     def _get_adjacent_cells(
             self,
-            ship_coords: Tuple[Tuple[int, int], Tuple[int, int]]
-    ) -> set:
-        start, end = ship_coords
+            start: Tuple[int, int], end: Tuple[int, int]) -> set:
         adjacent_cells = set()
 
-        # Determine all adjacent cells around the ship
-        for row in range(start[0] - 1, end[0] + 2):
-            for col in range(start[1] - 1, end[1] + 2):
-                if ((row, col) != (start[0], start[1]) and (row, col)
-                        != (end[0], end[1])):
+        if start[0] == end[0]:
+            for row in range(start[0] - 1, start[0] + 2):
+                for col in range(start[1] - 1, end[1] + 2):
                     adjacent_cells.add((row, col))
+        elif start[1] == end[1]:  # Vertical ship
+            for row in range(start[0] - 1, end[0] + 2):
+                for col in range(start[1] - 1, start[1] + 2):
+                    adjacent_cells.add((row, col))
+
         return adjacent_cells
+
+    def _check_adjacent_cells(
+            self,
+            start: Tuple[int, int], end: Tuple[int, int]) -> bool:
+        adjacent_cells = self._get_adjacent_cells(start, end)
+        for cell in adjacent_cells:
+            if cell in self.field:
+                return True
+        return False
 
     def fire(self, location: Tuple[int, int]) -> str:
         if location in self.field:
